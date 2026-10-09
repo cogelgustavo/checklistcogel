@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro de Funcionário e Biometria</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; padding: 20px; }
+    .container { max-width: 450px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    h2 { margin-top: 0; color: #333; font-size: 20px; text-align: center; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
+    input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+    button { border: none; padding: 12px; font-size: 15px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
+    .btn-bio { background-color: #0288d1; color: white; }
+    .btn-bio:hover { background-color: #0277bd; }
+    .btn-salvar { background-color: #2e7d32; color: white; }
+    .btn-salvar:hover { background-color: #1b5e20; }
+    button:disabled { background-color: #ccc; cursor: not-allowed; }
+    #statusBio { font-size: 13px; margin-top: 8px; text-align: center; font-weight: 500; }
+    #msg { margin-top: 15px; padding: 12px; border-radius: 4px; display: none; text-align: center; font-weight: bold; }
+    .sucesso { background-color: #d4edda; color: #155724; }
+    .erro { background-color: #f8d7da; color: #721c24; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>Cadastro de Biometria</h2>
+
+    <form id="formCadastro">
+      <div class="form-group">
+        <label for="matricula">Matrícula:</label>
+        <input type="text" id="matricula" required placeholder="Ex: 1024">
+      </div>
+
+      <div class="form-group">
+        <label for="nome">Nome Completo:</label>
+        <input type="text" id="nome" required placeholder="Ex: João Silva">
+      </div>
+
+      <button type="button" class="btn-bio" id="btnBiometria" onclick="cadastrarBiometria()">
+        1. Capturar Leitura Digital
+      </button>
+
+      <div id="statusBio"></div>
+
+      <button type="submit" class="btn-salvar" id="btnSalvar" disabled>
+        2. Salvar Cadastro na Planilha
+      </button>
+    </form>
+
+    <div id="msg"></div>
+  </div>
+
+  <script>
+    // SUBSTITA PELA URL DO SEU WEB APP PUBLICADO NO GOOGLE APPS SCRIPT
+    const WEB_APP_URL = "https://script.google.com/macros/s/SEU_SCRIPT_ID_AQUI/exec";
+
+    let credentialIdGlobal = "";
+
+    async function cadastrarBiometria() {
+      const statusBio = document.getElementById('statusBio');
+
+      if (!window.PublicKeyCredential) {
+        alert("Este navegador ou dispositivo não possui suporte para leitura biométrica (WebAuthn).");
+        return;
+      }
+
+      const nome = document.getElementById('nome').value;
+      if (!nome) {
+        alert("Por favor, preencha o campo Nome antes de ler a biometria.");
+        return;
+      }
+
+      try {
+        statusBio.innerText = "Aguardando leitura digital no dispositivo...";
+        statusBio.style.color = "#0288d1";
+
+        const challenge = new Uint8Array(32);
+        window.crypto.getRandomValues(challenge);
+
+        const userId = new Uint8Array(16);
+        window.crypto.getRandomValues(userId);
+
+        const publicKeyCredentialCreationOptions = {
+          challenge: challenge,
+          rp: { name: "Sistema de Cadastro de Funcionários" },
+          user: {
+            id: userId,
+            name: nome,
+            displayName: nome
+          },
+          pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+          authenticatorSelection: {
+            userVerification: "preferred"
+          },
+          timeout: 60000
+        };
+
+        // Dispara o leitor biométrico nativo do SO ou do celular
+        const credential = await navigator.credentials.create({
+          publicKey: publicKeyCredentialCreationOptions
+        });
+
+        // Converte o ID biométrico capturado para Base64
+        credentialIdGlobal = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+
+        statusBio.innerText = "✓ Digital biométrica capturada com sucesso!";
+        statusBio.style.color = "green";
+        document.getElementById('btnSalvar').disabled = false;
+
+      } catch (err) {
+        console.error(err);
+        statusBio.innerText = "Erro ao ler biometria: " + err.message;
+        statusBio.style.color = "red";
+      }
+    }
+
+    document.getElementById('formCadastro').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const btnSalvar = document.getElementById('btnSalvar');
+      const msg = document.getElementById('msg');
+
+      btnSalvar.disabled = true;
+      btnSalvar.innerText = "Enviando dados...";
+
+      const payload = {
+        matricula: document.getElementById('matricula').value,
+        nome: document.getElementById('nome').value,
+        credentialId: credentialIdGlobal,
+        dispositivoInfo: navigator.userAgent
+      };
+
+      try {
+        const response = await fetch(WEB_APP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 'text/plain' evita restrições rígidas de CORS do Apps Script
+          body: JSON.stringify(payload)
+        });
+
+        const res = await response.json();
+
+        msg.style.display = 'block';
+        msg.className = res.status;
+        msg.innerText = res.mensagem;
+
+        if (res.status === 'sucesso') {
+          document.getElementById('formCadastro').reset();
+          document.getElementById('statusBio').innerText = "";
+          btnSalvar.innerText = "2. Salvar Cadastro na Planilha";
+        } else {
+          btnSalvar.disabled = false;
+          btnSalvar.innerText = "Tentar Salvar Novamente";
+        }
+      } catch (err) {
+        console.error(err);
+        msg.style.display = 'block';
+        msg.className = 'erro';
+        msg.innerText = "Erro ao enviar dados para o servidor.";
+        btnSalvar.disabled = false;
+        btnSalvar.innerText = "Tentar Salvar Novamente";
+      }
+    });
+  </script>
+</body>
+</html>
