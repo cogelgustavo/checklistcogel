@@ -78,40 +78,38 @@
   </div>
 
   <script>
-    async function executarRemocao() {
-      const input = document.getElementById('inputLocal');
-      const arquivo = input.files[0];
-      
-      if (!arquivo) {
-        alert("Por favor, selecione uma imagem primeiro!");
-        return;
-      }
+   async function executarRemocao() {
+  const input = document.getElementById('inputLocal');
+  const arquivo = input.files[0];
+  
+  if (!arquivo) {
+    alert("Por favor, selecione uma imagem primeiro!");
+    return;
+  }
 
-      const statusDiv = document.getElementById('statusProcessamento');
-      const imgRes = document.getElementById('resultadoLocal');
-      
-      imgRes.style.display = 'none';
+  const statusDiv = document.getElementById('statusProcessamento');
+  const imgRes = document.getElementById('resultadoLocal');
+  
+  imgRes.style.display = 'none';
+  statusDiv.innerText = "⏳ A descarregar modelos de IA e a processar... (A 1ª vez demora um pouco)";
 
-      if (typeof imglyRemoveBackground === 'undefined') {
-        statusDiv.innerText = "❌ Erro: A biblioteca de IA não carregou corretamente.";
-        return;
-      }
+  try {
+    // Configuração explícita para forçar a busca correta dos assets de IA
+    const config = {
+      publicPath: "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/"
+    };
 
-      statusDiv.innerText = "⏳ A processar IA... (Na 1ª vez descarrega os pesos, aguarde)";
-
-      try {
-        // Processa a imagem inteiramente no navegador do usuário
-        const blob = await imglyRemoveBackground(arquivo);
-        const url = URL.createObjectURL(blob);
-        
-        imgRes.src = url;
-        imgRes.style.display = 'inline-block';
-        statusDiv.innerText = "✅ Fundo removido com sucesso!";
-      } catch (error) {
-        console.error(error);
-        statusDiv.innerText = "❌ Erro ao processar a imagem.";
-      }
-    }
+    const blob = await imglyRemoveBackground(arquivo, config);
+    const url = URL.createObjectURL(blob);
+    
+    imgRes.src = url;
+    imgRes.style.display = 'inline-block';
+    statusDiv.innerText = "✅ Fundo removido com sucesso!";
+  } catch (error) {
+    console.error(error);
+    statusDiv.innerText = "❌ Erro ao processar. Verifique a consola para detalhes.";
+  }
+}
   </script>
 </body>
 </html>
