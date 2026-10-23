@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Removedor de Fundo</title>
+  <title>Removedor de Fundo por IA</title>
   
-  <!-- Usando o CDN oficial unpkg que costuma passar pelas restrições de sandbox -->
-  <script src="https://unpkg.com/@imgly/background-removal@1.4.5/dist/bundle.js"></script>
+  <!-- Biblioteca oficial via CDN estável -->
+  <script src="https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/bundle.js"></script>
 
   <style>
     body {
@@ -67,7 +67,7 @@
 <body>
 
   <div class="box">
-    <h3 style="color: #008080; margin-top: 0;">✨ Removedor de Fundo por IA</h3>
+    <h3 style="color: #008080; margin-top: 0;">✨ Removedor de Fundo (IA Local)</h3>
     <p style="font-size: 12px; color: #666;">Selecione uma foto para remover o fundo:</p>
     
     <input type="file" id="inputLocal" accept="image/*">
@@ -91,16 +91,16 @@
       const imgRes = document.getElementById('resultadoLocal');
       
       imgRes.style.display = 'none';
-      
-      // Verifica se a biblioteca carregou com segurança antes de chamar
+
       if (typeof imglyRemoveBackground === 'undefined') {
-        statusDiv.innerText = "❌ Erro: A biblioteca de IA foi bloqueada pelo navegador ou ambiente.";
+        statusDiv.innerText = "❌ Erro: A biblioteca de IA não carregou corretamente.";
         return;
       }
 
-      statusDiv.innerText = "⏳ A processar IA... (Na 1ª vez descarrega o modelo, aguarde)";
+      statusDiv.innerText = "⏳ A processar IA... (Na 1ª vez descarrega os pesos, aguarde)";
 
       try {
+        // Processa a imagem inteiramente no navegador do usuário
         const blob = await imglyRemoveBackground(arquivo);
         const url = URL.createObjectURL(blob);
         
