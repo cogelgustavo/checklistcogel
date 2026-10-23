@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Removedor de Fundo por IA</title>
   
-  <!-- Importando a biblioteca de forma síncrona e segura -->
+  <!-- CDN oficial compatível com escopo global -->
   <script src="https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/bundle.js"></script>
 
   <style>
@@ -91,21 +91,21 @@
       const imgRes = document.getElementById('resultadoLocal');
       
       imgRes.style.display = 'none';
-
-      // Garante que a função global existe antes de prosseguir
-      if (typeof window.imglyRemoveBackground === 'undefined') {
-        statusDiv.innerText = "❌ Erro: A biblioteca de IA ainda não carregou. Atualize a página.";
-        return;
-      }
-
-      statusDiv.innerText = "⏳ A processar IA... (Na 1ª vez descarrega os modelos, aguarde)";
+      statusDiv.innerText = "⏳ A carregar IA e processar imagem... (Aguarde)";
 
       try {
+        // Verifica se o namespace global do imgly existe na página
+        const removeFn = window.removeBackground || (window.imgly && window.imgly.removeBackground);
+        
+        if (!removeFn) {
+          throw new Error("A função de remoção não foi injetada no escopo global.");
+        }
+
         const config = {
           publicPath: "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/"
         };
 
-        const blob = await window.imglyRemoveBackground(arquivo, config);
+        const blob = await removeFn(arquivo, config);
         const url = URL.createObjectURL(blob);
         
         imgRes.src = url;
@@ -113,7 +113,7 @@
         statusDiv.innerText = "✅ Fundo removido com sucesso!";
       } catch (error) {
         console.error(error);
-        statusDiv.innerText = "❌ Erro ao processar a imagem.";
+        statusDiv.innerText = "❌ Erro ao processar a imagem. Verifique a consola.";
       }
     }
   </script>
